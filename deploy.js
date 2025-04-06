@@ -1,13 +1,11 @@
 const { REST, Routes } = require('discord.js');
 
 const helpFile = require('./commands/bot/help.js');
-const aboutFile = require('./commands/bot/about.js');
 const { applicationId, guildId, token } = require('./config.json');
 
 
 const commands = [
-    helpFile.data.toJSON(),
-    aboutFile.data.toJSON()
+    helpFile.data.toJSON()
     ];
 
 const rest = new REST({ version: '10' }).setToken(token);
