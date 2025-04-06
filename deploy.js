@@ -3,12 +3,15 @@ const { REST, Routes } = require('discord.js');
 const pingFile = require('./commands/bot/ping.js');
 
 const mcidFile = require('./commands/minecraft/mcid.js');
+
+const reportFile = require('./applications/report.js');
 const { applicationId, guildId, token } = require('./config.json');
 
 
 const commands = [
     pingFile.data.toJSON(),
-    mcidFile.data.toJSON()
+    mcidFile.data.toJSON(),
+    reportFile.data.toJSON()
     ];
 
 const rest = new REST({ version: '10' }).setToken(token);
