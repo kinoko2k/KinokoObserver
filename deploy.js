@@ -1,5 +1,5 @@
 const { REST, Routes } = require('discord.js');
-const { applicationId, token } = require('./config.json');
+const { applicationId, guildId, token } = require('./config.json');
 
 const globalCommands = [
     require('./commands/bot/ping.js').data.toJSON(),
@@ -8,6 +8,7 @@ const globalCommands = [
     require('./commands/tools/hash.js').data.toJSON(),
     require('./commands/tools/post.js').data.toJSON(),
     require('./commands/tools/wiki.js').data.toJSON(),
+    require('./commands/tools/spotify.js').data.toJSON(),
     require('./applications/report.js').data.toJSON(),
 ];
 
@@ -18,6 +19,7 @@ const guildCommands = [
     require('./commands/tools/hash.js').data.toJSON(),
     require('./commands/tools/post.js').data.toJSON(),
     require('./commands/tools/wiki.js').data.toJSON(),
+    require('./commands/tools/spotify.js').data.toJSON(),
     require('./applications/report.js').data.toJSON(),
 ];
 
