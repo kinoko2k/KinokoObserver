@@ -4,8 +4,11 @@ const {
     GatewayIntentBits,
     SimpleShardingStrategy,
     EmbedBuilder,
+    REST,
+    Routes,
 } = require("discord.js");
 const { token } = require("./config.json");
+const { SlashCommandBuilder } = require('@discordjs/builders');
 // const { sequelize, Guild } = require('./models');
 
 const commands = [
@@ -106,6 +109,81 @@ client.on(Events.MessageCreate, async (message) => {
             }
         }
     }
+});
+
+const channelId = '1274697066248929360';
+function getDateMessage() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // 月は0から始まるので+1
+    const day = now.getDate();
+    const dayOfWeek = now.toLocaleString('ja-JP', { weekday: 'long' });
+
+    const targetDate = new Date(year, 11, 31); // 2025年12月31日
+    const diff = Math.ceil((targetDate - now) / (1000 * 60 * 60 * 24)); // 残り日数
+
+    return `日付が変わりました。あと2025年は、${diff}日です。\n今日は、${month}月${day}日（${dayOfWeek}）です。`;
+}
+
+function sendDailyMessage() {
+    const now = new Date();
+    const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+
+    setTimeout(() => {
+        const channel = client.channels.cache.get(channelId);
+        if (channel) {
+            channel.send(getDateMessage());
+        }
+        sendDailyMessage();
+    }, msUntilMidnight);
+}
+
+client.once('ready', async () => {
+    console.log('Bot is ready!');
+    sendDailyMessage();
+});
+
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}`);
+});
+
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    if (message.guild.id !== '1314566090453549108') return;
+    const logChannel = message.guild.channels.cache.get('1336245247235063860');
+    if (!logChannel) {
+        console.error('ログチャンネルが見つかりません。');
+        return;
+    }
+
+    let logMessage = `📩 **メッセージログ**\n👤 ユーザー: ${message.author.tag}\n📍 チャンネル: ${message.channel.name}\n💬 内容: ${message.content || "（テキストなし）"}`;
+
+    const attachments = message.attachments.map(attachment => attachment.url);
+    if (attachments.length > 0) {
+        logMessage += `\n🖼️ 添付画像:`;
+        attachments.forEach(url => logMessage += `\n${url}`);
+    }
+
+    logChannel.send(logMessage);
+});
+
+client.on('messageDelete', async (message) => {
+    if (!message.guild || message.guild.id !== '1314566090453549108') return;
+    const logChannel = message.guild.channels.cache.get('1336246859378724894');
+    if (!logChannel) {
+        console.error('ログチャンネルが見つかりません。');
+        return;
+    }
+
+    let logMessage = `🗑️ **メッセージ削除ログ**\n👤 ユーザー: ${message.author?.tag || "不明"}\n📍 チャンネル: ${message.channel.name}\n💬 削除された内容: ${message.content || "（テキストなし）"}`;
+
+    const attachments = message.attachments?.map(attachment => attachment.url) || [];
+    if (attachments.length > 0) {
+        logMessage += `\n🖼️ 削除された画像:`;
+        attachments.forEach(url => logMessage += `\n${url}`);
+    }
+
+    logChannel.send(logMessage);
 });
 
 client.login(token);
