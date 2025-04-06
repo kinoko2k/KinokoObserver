@@ -1,4 +1,10 @@
-const { ContextMenuCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+    ContextMenuCommandBuilder,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+} = require('discord.js');
 const { reportChannelId } = require('../config.json');
 
 module.exports = {
@@ -42,27 +48,27 @@ module.exports = {
                         { name: 'サーバーID', value: interaction.guild.id, inline: true },
                         { name: 'チャンネルID', value: message.channel.id, inline: true },
                         { name: 'メッセージID', value: message.id, inline: true },
-                        { name: 'メッセージ送信者', value: message.author.tag + '(`' + message.author.id + '`)', inline: true },
-                        { name: '報告者', value: interaction.user.tag + '(`' + interaction.user.id + '`)', inline: true }
+                        { name: 'メッセージ送信者', value: `${message.author.tag} (\`${message.author.id}\`)`, inline: true },
+                        { name: '報告者', value: `${interaction.user.tag} (\`${interaction.user.id}\`)`, inline: true }
                     )
                     .setTimestamp();
 
-                const reportChannel = interaction.guild.channels.cache.get(reportChannelId);
-                if (reportChannel) {
-                    await reportChannel.send({ embeds: [reportEmbed] });
+                try {
+                    const reportChannel = await interaction.client.channels.fetch(reportChannelId);
+                    if (reportChannel && reportChannel.isTextBased()) {
+                        await reportChannel.send({ embeds: [reportEmbed] });
+                    } else {
+                        console.error("reportChannelが見つからないか、テキストチャンネルではありません。");
+                    }
+
+                    await i.update({ content: '報告が送信されました！', components: [], ephemeral: true });
+                } catch (err) {
+                    console.error("報告チャンネルの送信中にエラー:", err);
+                    await i.update({ content: '報告の送信中にエラーが発生しました。', components: [], ephemeral: true });
                 }
 
-                if (!interaction.deferred && !interaction.replied) {
-                    await i.update({ content: '報告が送信されました！', components: [], ephemeral: true });
-                } else {
-                    await interaction.followUp({ content: '報告が送信されました！', ephemeral: true });
-                }
             } else if (i.customId === 'report_cancel') {
-                if (!interaction.deferred && !interaction.replied) {
-                    await i.update({ content: '報告がキャンセルされました。', components: [], ephemeral: true });
-                } else {
-                    await interaction.followUp({ content: '報告がキャンセルされました。', ephemeral: true });
-                }
+                await i.update({ content: '報告がキャンセルされました。', components: [], ephemeral: true });
             }
 
             await interaction.editReply({ components: [] });

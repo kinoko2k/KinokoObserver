@@ -1,29 +1,22 @@
 const { REST, Routes } = require('discord.js');
-
-const pingFile = require('./commands/bot/ping.js');
-
-const mcidFile = require('./commands/minecraft/mcid.js');
-
-const reportFile = require('./applications/report.js');
-const { applicationId, guildId, token } = require('./config.json');
-
+const { applicationId, token } = require('./config.json');
 
 const commands = [
-    pingFile.data.toJSON(),
-    mcidFile.data.toJSON(),
-    reportFile.data.toJSON()
-    ];
+    require('./commands/bot/ping.js').data.toJSON(),
+    require('./commands/minecraft/mcid.js').data.toJSON(),
+    require('./applications/report.js').data.toJSON(),
+];
 
 const rest = new REST({ version: '10' }).setToken(token);
 
 (async () => {
     try {
-        console.log('サーバー固有のコマンドを登録中...');
+        console.log('グローバルコマンドを登録中...');
         await rest.put(
-            Routes.applicationGuildCommands(applicationId, guildId),
+            Routes.applicationCommands(applicationId),
             { body: commands },
         );
-        console.log('サーバー固有のコマンドが登録されました！');
+        console.log('グローバルコマンドが登録されました！');
     } catch (error) {
         console.error('コマンドの登録中にエラーが発生しました:', error);
     }
