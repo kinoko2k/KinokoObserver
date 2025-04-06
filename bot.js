@@ -12,6 +12,10 @@ const commands = [
     require("./commands/bot/ping.js"),
     require("./commands/minecraft/mcid.js"),
     require("./applications/report.js"),
+    require('./commands/tools/encode.js'),
+    require('./commands/tools/hash.js'),
+    require('./commands/tools/post.js'),
+    require('./commands/tools/wiki.js'),
 ];
 
 const client = new Client({
