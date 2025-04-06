@@ -1,11 +1,14 @@
 const { REST, Routes } = require('discord.js');
 
-const helpFile = require('./commands/bot/help.js');
+const pingFile = require('./commands/bot/ping.js');
+
+const mcidFile = require('./commands/minecraft/mcid.js');
 const { applicationId, guildId, token } = require('./config.json');
 
 
 const commands = [
-    helpFile.data.toJSON()
+    pingFile.data.toJSON(),
+    mcidFile.data.toJSON()
     ];
 
 const rest = new REST({ version: '10' }).setToken(token);

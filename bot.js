@@ -9,9 +9,9 @@ const { token } = require("./config.json");
 // const { sequelize, Guild } = require('./models');
 
 const commands = [
-    require("./commands/bot/help.js"),
-    require("./commands/bot/about.js"),
-    require("./app/report.js"),
+    require("./commands/bot/ping.js"),
+    require("./commands/minecraft/mcid.js"),
+    require("./applications/report.js"),
 ];
 
 const client = new Client({
