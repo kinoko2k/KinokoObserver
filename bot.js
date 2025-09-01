@@ -7,9 +7,11 @@ const {
     REST,
     Routes,
 } = require("discord.js");
-const { token } = require("./config.json");
-const { SlashCommandBuilder } = require('@discordjs/builders');
-// const { sequelize, Guild } = require('./models');
+const { token, config } = require("./config.json");
+const fs = require('fs');
+const path = require('path');
+const schedule = require('node-schedule');
+const birthdayChecker = require('./events/birthday-checker');
 
 const commands = [
     require("./commands/bot/about.js"),
@@ -39,6 +41,16 @@ client.once(Events.ClientReady, async (c) => {
         status: "online",
     });
 });
+
+client.commands = new Collection();
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    client.commands.set(command.data.name, command);
+}
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (
@@ -75,6 +87,29 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 });
 
+// 0時に誕生日のユーザをチェックする
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}!`);
+    schedule.scheduleJob('0 0 * * *', () => {
+        birthdayChecker.checkBirthdays(client);
+    });
+    birthdayChecker.checkBirthdays(client);
+});
+
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isCommand()) return;
+
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
+
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: 'コマンドの実行中にエラーが発生しました。', ephemeral: true });
+    }
+});
+
 client.once("ready", async () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
@@ -108,42 +143,6 @@ client.on(Events.MessageCreate, async (message) => {
             }
         }
     }
-});
-
-const channelId = '1274697066248929360';
-function getDateMessage() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1; // 月は0から始まるので+1
-    const day = now.getDate();
-    const dayOfWeek = now.toLocaleString('ja-JP', { weekday: 'long' });
-
-    const targetDate = new Date(year, 11, 31); // 2025年12月31日
-    const diff = Math.ceil((targetDate - now) / (1000 * 60 * 60 * 24)); // 残り日数
-
-    return `日付が変わりました。あと2025年は、${diff}日です。\n今日は、${month}月${day}日（${dayOfWeek}）です。`;
-}
-
-function sendDailyMessage() {
-    const now = new Date();
-    const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
-
-    setTimeout(() => {
-        const channel = client.channels.cache.get(channelId);
-        if (channel) {
-            channel.send(getDateMessage());
-        }
-        sendDailyMessage();
-    }, msUntilMidnight);
-}
-
-client.once('ready', async () => {
-    console.log('Bot is ready!');
-    sendDailyMessage();
-});
-
-client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
