@@ -1,0 +1,6 @@
+{
+    "applicationId": "application_id",
+    "guildIds": ["guild_id"],
+    "token": "token",
+    "reportChannelId": "report_id"
+}
