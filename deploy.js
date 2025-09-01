@@ -4,11 +4,10 @@ const fs = require('fs');
 const path = require('path');
 
 const guildCommands = [
+    require('./commands/bot/about.js').data.toJSON(),
     require('./commands/bot/ping.js').data.toJSON(),
     require('./commands/minecraft/mcid.js').data.toJSON(),
     require('./commands/tools/encode.js').data.toJSON(),
-    require('./commands/tools/hash.js').data.toJSON(),
-    require('./commands/tools/post.js').data.toJSON(),
     require('./commands/tools/wiki.js').data.toJSON(),
     require('./commands/tools/spotify.js').data.toJSON(),
     require('./applications/report.js').data.toJSON(),

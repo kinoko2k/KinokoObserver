@@ -12,11 +12,10 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 // const { sequelize, Guild } = require('./models');
 
 const commands = [
+    require("./commands/bot/about.js"),
     require("./commands/bot/ping.js"),
     require("./commands/minecraft/mcid.js"),
     require('./commands/tools/encode.js'),
-    require('./commands/tools/hash.js'),
-    require('./commands/tools/post.js'),
     require('./commands/tools/wiki.js'),
     require('./commands/tools/spotify.js'),
     require("./applications/report.js")
