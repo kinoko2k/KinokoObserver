@@ -50,4 +50,4 @@ module.exports = {
             console.error('Error checking birthdays:', error);
         }
     }
-};
+}

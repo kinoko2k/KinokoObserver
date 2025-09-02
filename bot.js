@@ -28,7 +28,8 @@ const commands = [
     require('./commands/tools/encode.js'),
     require('./commands/tools/wiki.js'),
     require('./commands/tools/spotify.js'),
-    require("./applications/report.js")
+    require("./applications/report.js"),
+    require("./commands/settings/setup.js"),
 ];
 
 const client = new Client({
@@ -48,7 +49,14 @@ client.once(Events.ClientReady, async (c) => {
         activities: [{ name: "/", type: "PLAYING" }],
         status: "online",
     });
+
+    await voiceLogger.initializeVoiceSessions(c);
 });
+
+client.on('voiceStateUpdate', async (oldState, newState) => {
+    await voiceLogger.logVoiceStateUpdate(oldState, newState);
+});
+
 
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');

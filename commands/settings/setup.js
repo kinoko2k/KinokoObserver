@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const mysql = require('mysql2/promise');
-const config = require('../config.json');
+const config = require('../../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
