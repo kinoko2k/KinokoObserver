@@ -10,7 +10,6 @@ const guildCommands = [
     require('./commands/tools/encode.js').data.toJSON(),
     require('./commands/tools/wiki.js').data.toJSON(),
     require('./commands/tools/spotify.js').data.toJSON(),
-    require('./applications/report.js').data.toJSON(),
 ];
 
 const appPath = path.join(__dirname, 'applications');

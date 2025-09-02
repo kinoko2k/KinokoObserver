@@ -4,8 +4,16 @@ const {
     GatewayIntentBits,
     SimpleShardingStrategy,
     EmbedBuilder,
-    REST,
-    Routes,
+    Partials,
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
+    Collection,
+    ModalSubmitInteraction,
+    TextInputComponent,
+    ButtonBuilder,
+    ButtonStyle,
+    AttachmentBuilder,
 } = require("discord.js");
 const { token, config } = require("./config.json");
 const fs = require('fs');
