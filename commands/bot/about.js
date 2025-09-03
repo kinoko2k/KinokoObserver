@@ -8,7 +8,7 @@ module.exports = {
     async execute(interaction) {
         const pages = [
             new EmbedBuilder()
-                .setColor('#00ffaad0')
+                .setColor(0x00ffaad0)
                 .setTitle('KinokoObserver')
                 .setDescription('なんか作った。')
         ];
