@@ -11,6 +11,7 @@ const guildCommands = [
     require('./commands/tools/wiki.js').data.toJSON(),
     require('./commands/tools/spotify.js').data.toJSON(),
     require("./commands/settings/setup.js").data.toJSON(),
+    require("./commands/settings/suggestion.js").data.toJSON(),
 ];
 
 const appPath = path.join(__dirname, 'applications');

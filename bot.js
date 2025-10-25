@@ -2,20 +2,16 @@ const {
     Client,
     Events,
     GatewayIntentBits,
-    SimpleShardingStrategy,
     EmbedBuilder,
-    Partials,
     ActionRowBuilder,
-    StringSelectMenuBuilder,
-    StringSelectMenuOptionBuilder,
-    Collection,
-    ModalSubmitInteraction,
-    TextInputComponent,
     ButtonBuilder,
     ButtonStyle,
-    AttachmentBuilder,
+    Collection,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
 } = require("discord.js");
-const { token, config } = require("./config.json");
+const { token, suggestionChannelId, suggestionResultChannelId } = require("./config.json");
 const fs = require('fs');
 const path = require('path');
 const schedule = require('node-schedule');
@@ -33,6 +29,7 @@ const commands = [
     require('./commands/tools/spotify.js'),
     require("./applications/report.js"),
     require("./commands/settings/setup.js"),
+    require("./commands/settings/suggestion.js"),
 ];
 
 const client = new Client({
@@ -63,55 +60,196 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
 
 client.commands = new Collection();
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-
-for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    client.commands.set(command.data.name, command);
+const commandFolders = fs.readdirSync(path.join(__dirname, 'commands'));
+for (const folder of commandFolders) {
+    const commandFiles = fs.readdirSync(path.join(__dirname, 'commands', folder)).filter(file => file.endsWith('.js'));
+    for (const file of commandFiles) {
+        const filePath = path.join(__dirname, 'commands', folder, file);
+        const command = require(filePath);
+        if ('data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+        }
+    }
 }
 
 client.on(Events.InteractionCreate, async (interaction) => {
-    // ▼ 新しく追加 ▼
-    // 辞書機能のボタンクリックを処理
-    await dictionaryHandler.handleInteractionCreate(interaction);
+    // スラッシュコマンドの処理
+    if (interaction.isChatInputCommand()) {
+        const command = interaction.client.commands.get(interaction.commandName);
 
-    // 既存のコマンド処理
-    if (
-        !interaction.isChatInputCommand() &&
-        !interaction.isMessageContextMenuCommand()
-    ) {
-        // ボタン等のインタラクションはここで処理が終わるので、コマンドが見つからないエラーを防ぐ
-        if(interaction.isButton()) return; 
-        return;
-    }
+        if (!command) {
+            console.error(`${interaction.commandName} というコマンドは見つかりませんでした。`);
+            return;
+        }
 
-    const command = commands.find(
-        (cmd) => cmd.data.name === interaction.commandName
-    );
-
-    if (command) {
         try {
             await command.execute(interaction);
         } catch (error) {
             console.error(error);
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({
-                    content: "コマンド実行時にエラーになりました。",
-                    ephemeral: true,
-                });
+                await interaction.followUp({ content: 'コマンド実行中にエラーが発生しました！', ephemeral: true });
             } else {
-                await interaction.reply({
-                    content: "コマンド実行時にエラーになりました。",
-                    ephemeral: true,
-                });
+                await interaction.reply({ content: 'コマンド実行中にエラーが発生しました！', ephemeral: true });
             }
         }
-    } else {
-        console.error(
-            `${interaction.commandName}というコマンドには対応していません。`
-        );
+        return;
+    }
+
+    // ボタンインタラクションの処理
+    if (interaction.isButton()) {
+        // 意見投稿モーダルを開くボタン
+        if (interaction.customId === 'open_suggestion_modal') {
+            const modal = new ModalBuilder()
+                .setCustomId('suggestion_modal')
+                .setTitle('ご意見・ご提案');
+
+            const suggestionInput = new TextInputBuilder()
+                .setCustomId('suggestion_input')
+                .setLabel("ご意見・ご提案内容")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('サーバーをより良くするためのアイデアを自由にお書きください。')
+                .setRequired(true);
+
+            const actionRow = new ActionRowBuilder().addComponents(suggestionInput);
+            modal.addComponents(actionRow);
+
+            await interaction.showModal(modal);
+        }
+
+        // 投票ボタンの処理はモーダル送信後のコレクターで行うため、ここでは何もしない
+    }
+
+    // モーダル送信の処理
+    if (interaction.isModalSubmit()) {
+        if (interaction.customId === 'suggestion_modal') {
+            const suggestionText = interaction.fields.getTextInputValue('suggestion_input');
+
+            // URLが含まれているかチェック
+            const urlRegex = /https?:\/\/[^\s]+/g;
+            if (urlRegex.test(suggestionText)) {
+                await interaction.reply({ content: 'ご意見にURLが含まれているため、投稿を棄却しました。', ephemeral: true });
+                return;
+            }
+
+            const suggestionChannel = await interaction.client.channels.fetch(suggestionChannelId);
+
+            if (!suggestionChannel) {
+                console.error('意見投稿チャンネルが見つかりません。');
+                return interaction.reply({ content: 'エラー: 意見投稿チャンネルが見つかりませんでした。', ephemeral: true });
+            }
+
+            const suggestionEmbed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('新しい意見が投稿されました')
+                .setDescription(suggestionText)
+                .setFooter({ text: 'この意見に投票してください' });
+
+            const voteRow = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('suggestion_approve')
+                        .setLabel('賛成 (0)')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('⭕'),
+                    new ButtonBuilder()
+                        .setCustomId('suggestion_reject')
+                        .setLabel('反対 (0)')
+                        .setStyle(ButtonStyle.Danger)
+                        .setEmoji('❌')
+                );
+
+            const sentMessage = await suggestionChannel.send({ embeds: [suggestionEmbed], components: [voteRow] });
+            await interaction.reply({ content: 'ご意見ありがとうございます！匿名で投稿されました。', ephemeral: true });
+
+            // 投票の処理
+            const filter = i => i.customId === 'suggestion_approve' || i.customId === 'suggestion_reject';
+            const collector = sentMessage.createMessageComponentCollector({ filter, time: 86400000 }); // 24時間
+
+            let approveCount = 0;
+            let rejectCount = 0;
+            const votedUsers = new Set();
+
+            collector.on('collect', async i => {
+                if (votedUsers.has(i.user.id)) {
+                    await i.reply({ content: '既にこの意見に投票済みです。', ephemeral: true });
+                    return;
+                }
+
+                if (i.customId === 'suggestion_approve') {
+                    approveCount++;
+                } else if (i.customId === 'suggestion_reject') {
+                    rejectCount++;
+                }
+                votedUsers.add(i.user.id);
+
+                const updatedRow = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('suggestion_approve')
+                            .setLabel(`賛成 (${approveCount})`)
+                            .setStyle(ButtonStyle.Success)
+                            .setEmoji('⭕'),
+                        new ButtonBuilder()
+                            .setCustomId('suggestion_reject')
+                            .setLabel(`反対 (${rejectCount})`)
+                            .setStyle(ButtonStyle.Danger)
+                            .setEmoji('❌')
+                    );
+
+                await i.update({ components: [updatedRow] });
+
+                // どちらかの票が5に達したら結果を通知
+                if (approveCount >= 5 || rejectCount >= 5) {
+                    collector.stop('limit_reached');
+                }
+            });
+
+            collector.on('end', async (collected, reason) => {
+                const resultChannel = await interaction.client.channels.fetch(suggestionResultChannelId);
+                if (!resultChannel) {
+                    console.error('運営チャンネルが見つかりません。');
+                    return;
+                }
+
+                const resultEmbed = new EmbedBuilder()
+                    .setTitle('意見投票の結果')
+                    .setDescription(`**元の意見:**\n${suggestionText}`)
+                    .addFields(
+                        { name: '賛成', value: `${approveCount}票`, inline: true },
+                        { name: '反対', value: `${rejectCount}票`, inline: true }
+                    )
+                    .setTimestamp();
+
+                if (approveCount >= 5) {
+                    resultEmbed.setColor(0x00FF00).addFields({ name: '結果', value: '賛成多数で可決されました。' });
+                } else if (rejectCount >= 5) {
+                    resultEmbed.setColor(0xFF0000).addFields({ name: '結果', value: '反対多数で否決されました。' });
+                } else {
+                    // タイムアウトした場合
+                    resultEmbed.setColor(0x808080).addFields({ name: '結果', value: '規定票数に達さず投票が終了しました。' });
+                }
+
+                await resultChannel.send({ embeds: [resultEmbed] });
+
+                // 元のメッセージのボタンを無効化
+                const disabledRow = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('suggestion_approve_disabled')
+                            .setLabel(`賛成 (${approveCount})`)
+                            .setStyle(ButtonStyle.Success)
+                            .setEmoji('⭕')
+                            .setDisabled(true),
+                        new ButtonBuilder()
+                            .setCustomId('suggestion_reject_disabled')
+                            .setLabel(`反対 (${rejectCount})`)
+                            .setStyle(ButtonStyle.Danger)
+                            .setEmoji('❌')
+                            .setDisabled(true)
+                    );
+                await sentMessage.edit({ components: [disabledRow] });
+            });
+        }
     }
 });
 
