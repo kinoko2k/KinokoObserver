@@ -17,7 +17,6 @@ const path = require('path');
 const schedule = require('node-schedule');
 const birthdayChecker = require('./events/birthday-checker');
 const voiceLogger = require('./events/vc-log');
-const dictionaryHandler = require('./events/dictionary.js'); 
 require('dotenv').config();
 
 const commands = [
@@ -52,6 +51,12 @@ client.once(Events.ClientReady, async (c) => {
 
     // VCセッション情報を初期化
     await voiceLogger.initializeVoiceSessions(c);
+
+    // 0時に誕生日のユーザをチェックする
+    schedule.scheduleJob('0 0 * * *', () => {
+        console.log('誕生日のユーザーをチェックしています...');
+        birthdayChecker.checkBirthdays(client);
+    });
 });
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
@@ -72,6 +77,9 @@ for (const folder of commandFolders) {
     }
 }
 
+// ▼▼▼▼▼ ここから下を修正 ▼▼▼▼▼
+
+// interactionCreateイベントリスナーを一つに統合
 client.on(Events.InteractionCreate, async (interaction) => {
     // スラッシュコマンドの処理
     if (interaction.isChatInputCommand()) {
@@ -92,41 +100,54 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 await interaction.reply({ content: 'コマンド実行中にエラーが発生しました！', ephemeral: true });
             }
         }
-        return;
+        return; // 他の処理に進まないようにする
     }
 
     // ボタンインタラクションの処理
     if (interaction.isButton()) {
         // 意見投稿モーダルを開くボタン
-        if (interaction.customId === 'open_suggestion_modal') {
+        if (interaction.customId.startsWith('open_suggestion_modal_')) {
+            const type = interaction.customId.endsWith('anonymous') ? 'anonymous' : 'named';
+
             const modal = new ModalBuilder()
-                .setCustomId('suggestion_modal')
+                .setCustomId(`suggestion_modal_${type}`)
                 .setTitle('ご意見・ご提案');
 
-            const suggestionInput = new TextInputBuilder()
-                .setCustomId('suggestion_input')
-                .setLabel("ご意見・ご提案内容")
-                .setStyle(TextInputStyle.Paragraph)
-                .setPlaceholder('サーバーをより良くするためのアイデアを自由にお書きください。')
+            const titleInput = new TextInputBuilder()
+                .setCustomId('suggestion_title')
+                .setLabel("タイトル")
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('意見の要点を簡潔に記入してください。')
                 .setRequired(true);
 
-            const actionRow = new ActionRowBuilder().addComponents(suggestionInput);
-            modal.addComponents(actionRow);
+            const descriptionInput = new TextInputBuilder()
+                .setCustomId('suggestion_description')
+                .setLabel("説明")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('サーバーをより良くするための具体的なアイデアを自由にお書きください。')
+                .setRequired(true);
+
+            const firstActionRow = new ActionRowBuilder().addComponents(titleInput);
+            const secondActionRow = new ActionRowBuilder().addComponents(descriptionInput);
+            modal.addComponents(firstActionRow, secondActionRow);
 
             await interaction.showModal(modal);
         }
-
-        // 投票ボタンの処理はモーダル送信後のコレクターで行うため、ここでは何もしない
+        // 他のボタン処理があればここに追加
+        return;
     }
 
     // モーダル送信の処理
     if (interaction.isModalSubmit()) {
-        if (interaction.customId === 'suggestion_modal') {
-            const suggestionText = interaction.fields.getTextInputValue('suggestion_input');
+        if (interaction.customId.startsWith('suggestion_modal_')) {
+            const isAnonymous = interaction.customId.endsWith('anonymous');
+            const title = interaction.fields.getTextInputValue('suggestion_title');
+            const description = interaction.fields.getTextInputValue('suggestion_description');
+            const suggestionText = `**${title}**\n\n${description}`;
 
             // URLが含まれているかチェック
             const urlRegex = /https?:\/\/[^\s]+/g;
-            if (urlRegex.test(suggestionText)) {
+            if (urlRegex.test(title) || urlRegex.test(description)) {
                 await interaction.reply({ content: 'ご意見にURLが含まれているため、投稿を棄却しました。', ephemeral: true });
                 return;
             }
@@ -140,9 +161,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
             const suggestionEmbed = new EmbedBuilder()
                 .setColor(0x0099FF)
-                .setTitle('新しい意見が投稿されました')
-                .setDescription(suggestionText)
+                .setTitle(title)
+                .setDescription(description)
                 .setFooter({ text: 'この意見に投票してください' });
+
+            if (!isAnonymous) {
+                suggestionEmbed.setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() });
+            }
 
             const voteRow = new ActionRowBuilder()
                 .addComponents(
@@ -159,7 +184,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 );
 
             const sentMessage = await suggestionChannel.send({ embeds: [suggestionEmbed], components: [voteRow] });
-            await interaction.reply({ content: 'ご意見ありがとうございます！匿名で投稿されました。', ephemeral: true });
+            await interaction.reply({ content: 'ご意見ありがとうございます！投稿が完了しました。', ephemeral: true });
 
             // 投票の処理
             const filter = i => i.customId === 'suggestion_approve' || i.customId === 'suggestion_reject';
@@ -219,65 +244,42 @@ client.on(Events.InteractionCreate, async (interaction) => {
                         { name: '反対', value: `${rejectCount}票`, inline: true }
                     )
                     .setTimestamp();
+                
+                if (!isAnonymous) {
+                    resultEmbed.setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() });
+                }
 
                 if (approveCount >= 5) {
                     resultEmbed.setColor(0x00FF00).addFields({ name: '結果', value: '賛成多数で可決されました。' });
                 } else if (rejectCount >= 5) {
                     resultEmbed.setColor(0xFF0000).addFields({ name: '結果', value: '反対多数で否決されました。' });
                 } else {
-                    // タイムアウトした場合
                     resultEmbed.setColor(0x808080).addFields({ name: '結果', value: '規定票数に達さず投票が終了しました。' });
                 }
 
                 await resultChannel.send({ embeds: [resultEmbed] });
 
-                // 元のメッセージのボタンを無効化
                 const disabledRow = new ActionRowBuilder()
                     .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('suggestion_approve_disabled')
-                            .setLabel(`賛成 (${approveCount})`)
-                            .setStyle(ButtonStyle.Success)
-                            .setEmoji('⭕')
-                            .setDisabled(true),
-                        new ButtonBuilder()
-                            .setCustomId('suggestion_reject_disabled')
-                            .setLabel(`反対 (${rejectCount})`)
-                            .setStyle(ButtonStyle.Danger)
-                            .setEmoji('❌')
-                            .setDisabled(true)
+                        new ButtonBuilder().setCustomId('suggestion_approve_disabled').setLabel(`賛成 (${approveCount})`).setStyle(ButtonStyle.Success).setEmoji('⭕').setDisabled(true),
+                        new ButtonBuilder().setCustomId('suggestion_reject_disabled').setLabel(`反対 (${rejectCount})`).setStyle(ButtonStyle.Danger).setEmoji('❌').setDisabled(true)
                     );
-                await sentMessage.edit({ components: [disabledRow] });
+                
+                try {
+                    await sentMessage.edit({ components: [disabledRow] });
+                } catch (error) {
+                    if (error.code === 10008) { // Unknown Message
+                        console.log(`投票メッセージ (ID: ${sentMessage.id}) は既に削除されていたため、編集をスキップしました。`);
+                    } else {
+                        console.error('投票メッセージの編集中に予期せぬエラーが発生しました:', error);
+                    }
+                }
             });
         }
     }
 });
 
-// 0時に誕生日のユーザをチェックする
-client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-    schedule.scheduleJob('0 0 * * *', () => {
-        birthdayChecker.checkBirthdays(client);
-    });
-    birthdayChecker.checkBirthdays(client);
-});
-
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isCommand()) return;
-
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        console.error(error);
-        await interaction.reply({ content: 'コマンドの実行中にエラーが発生しました。', ephemeral: true });
-    }
-});
-
 client.on('messageCreate', async (message) => {
-    await dictionaryHandler.handleMessageCreate(message);
     if (message.author.bot) return;
     if (message.guild.id !== '1274617838212218893') return;
     const logChannel = message.guild.channels.cache.get('1413210036041416926');
