@@ -21,6 +21,7 @@ const path = require('path');
 const schedule = require('node-schedule');
 const birthdayChecker = require('./events/birthday-checker');
 const voiceLogger = require('./events/vc-log');
+const dictionaryHandler = require('./events/dictionary.js'); 
 require('dotenv').config();
 
 const commands = [
@@ -72,11 +73,19 @@ for (const file of commandFiles) {
 }
 
 client.on(Events.InteractionCreate, async (interaction) => {
+    // ▼ 新しく追加 ▼
+    // 辞書機能のボタンクリックを処理
+    await dictionaryHandler.handleInteractionCreate(interaction);
+
+    // 既存のコマンド処理
     if (
         !interaction.isChatInputCommand() &&
         !interaction.isMessageContextMenuCommand()
-    )
+    ) {
+        // ボタン等のインタラクションはここで処理が終わるので、コマンドが見つからないエラーを防ぐ
+        if(interaction.isButton()) return; 
         return;
+    }
 
     const command = commands.find(
         (cmd) => cmd.data.name === interaction.commandName
@@ -129,11 +138,8 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-client.once("ready", async () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-});
-
 client.on('messageCreate', async (message) => {
+    await dictionaryHandler.handleMessageCreate(message);
     if (message.author.bot) return;
     if (message.guild.id !== '1274617838212218893') return;
     const logChannel = message.guild.channels.cache.get('1413210036041416926');
