@@ -20,6 +20,8 @@ const fs = require('fs');
 const path = require('path');
 const schedule = require('node-schedule');
 const birthdayChecker = require('./events/birthday-checker');
+const voiceLogger = require('./events/vc-log');
+require('dotenv').config();
 
 const commands = [
     require("./commands/bot/about.js"),
@@ -50,6 +52,7 @@ client.once(Events.ClientReady, async (c) => {
         status: "online",
     });
 
+    // VCセッション情報を初期化
     await voiceLogger.initializeVoiceSessions(c);
 });
 
@@ -130,41 +133,10 @@ client.once("ready", async () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
 
-client.on(Events.MessageCreate, async (message) => {
-    if (message.author.id === "302050872383242240") {
-        if (
-            message.embeds[0] &&
-            message.embeds[0].color === 2406327 &&
-            message.embeds[0].url === "https://disboard.org/" &&
-            (message.embeds[0].description.match(/表示順をアップしたよ/) ||
-                message.embeds[0].description.match(/Bump done/) ||
-                message.embeds[0].description.match(/Bump effectué/) ||
-                message.embeds[0].description.match(/Bump fatto/) ||
-                message.embeds[0].description.match(/Podbito serwer/) ||
-                message.embeds[0].description.match(/Успешно поднято/) ||
-                message.embeds[0].description.match(/갱신했어/) ||
-                message.embeds[0].description.match(/Patlatma tamamlandı/))
-        ) {
-            const guild = await Guild.findByPk(message.guild.id);
-
-            if (guild && guild.bump === 1) {
-                const m = await message.channel.send("ここメッセージ");
-                setTimeout(() => {
-                    m.delete();
-                }, 7200000);
-
-                setTimeout(() => {
-                    message.channel.send("ここメッセージ");
-                }, 7200000);
-            }
-        }
-    }
-});
-
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-    if (message.guild.id !== '1314566090453549108') return;
-    const logChannel = message.guild.channels.cache.get('1336245247235063860');
+    if (message.guild.id !== '1274617838212218893') return;
+    const logChannel = message.guild.channels.cache.get('1413210036041416926');
     if (!logChannel) {
         console.error('ログチャンネルが見つかりません。');
         return;
@@ -182,12 +154,11 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('messageDelete', async (message) => {
-    if (!message.guild || message.guild.id !== '1314566090453549108') return;
-    const logChannel = message.guild.channels.cache.get('1336246859378724894');
-    if (!logChannel) {
-        console.error('ログチャンネルが見つかりません。');
-        return;
-    }
+    // メッセージにguildプロパティがあるか、またはguildが特定のIDと一致するか確認
+    if (!message.guild || message.guild.id !== '1274617838212218893') return;
+
+    const logChannel = message.guild.channels.cache.get('1413210179402727454');
+    if (!logChannel) return;
 
     let logMessage = `🗑️ **メッセージ削除ログ**\n👤 ユーザー: ${message.author?.tag || "不明"}\n📍 チャンネル: ${message.channel.name}\n💬 削除された内容: ${message.content || "（テキストなし）"}`;
 

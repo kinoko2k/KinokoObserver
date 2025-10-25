@@ -16,9 +16,11 @@ module.exports = {
         const member = newState.member || oldState.member;
         if (!member || member.user.bot) return; // ボットは除外
 
+        // ログチャンネルがない場合は終了
         const guild = newState.guild || oldState.guild;
+        if (!guild) return;
+        
         const logChannel = guild.channels.cache.get(config.voiceLogChannelId);
-
         if (!logChannel) {
             console.error('VCログチャンネルが見つかりません。');
             return;
@@ -41,7 +43,7 @@ module.exports = {
                 .setDescription(`${member.displayName}さんが **${newState.channel.name}** に参加しました！`)
                 .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }))
                 .setTimestamp(now)
-                .setFooter({ text: `<t:${timestamp}:F>` });
+                .setFooter({ text: `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}` });
 
             await logChannel.send({ embeds: [joinEmbed] });
         }
@@ -74,7 +76,7 @@ module.exports = {
                 .setDescription(`${member.displayName}さんが **${oldState.channel.name}** から退出しました。`)
                 .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }))
                 .setTimestamp(now)
-                .setFooter({ text: `接続時間: ${durationText} | <t:${timestamp}:F>` });
+                .setFooter({ text: `接続時間: ${durationText} | ${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}` });
 
             await logChannel.send({ embeds: [leaveEmbed] });
         }
@@ -98,7 +100,7 @@ module.exports = {
                 .setDescription(`${member.displayName}さんが **${oldState.channel.name}** から **${newState.channel.name}** に移動しました。`)
                 .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }))
                 .setTimestamp(now)
-                .setFooter({ text: `<t:${timestamp}:F>` });
+                .setFooter({ text: `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}` });
 
             await logChannel.send({ embeds: [moveEmbed] });
         }
