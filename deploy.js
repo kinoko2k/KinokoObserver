@@ -7,6 +7,7 @@ const guildCommands = [
     require('./commands/minecraft/mcid.js').data.toJSON(),
     require('./commands/tools/encode.js').data.toJSON(),
     require("./commands/settings/suggestion.js").data.toJSON(),
+    require("./commands/mcstats/mcstats.js").data.toJSON(),
 ];
 
 const appPath = path.join(__dirname, 'applications');

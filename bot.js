@@ -15,14 +15,13 @@ const { token, suggestionChannelId, suggestionResultChannelId } = require("./con
 const fs = require('fs');
 const path = require('path');
 const schedule = require('node-schedule');
-const birthdayChecker = require('./events/birthday-checker');
-const voiceLogger = require('./events/vc-log');
 require('dotenv').config();
 
 const commands = [
     require("./commands/minecraft/mcid.js"),
     require('./commands/tools/encode.js'),
     require("./commands/settings/suggestion.js"),
+    require("./commands/mcstats/mcstats.js"),
 ];
 
 const client = new Client({
@@ -43,7 +42,6 @@ client.once(Events.ClientReady, async (c) => {
         status: "online",
     });
 
-    await voiceLogger.initializeVoiceSessions(c);
 });
 
 client.commands = new Collection();
