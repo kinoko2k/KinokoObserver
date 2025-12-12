@@ -20,14 +20,8 @@ const voiceLogger = require('./events/vc-log');
 require('dotenv').config();
 
 const commands = [
-    require("./commands/bot/about.js"),
-    require("./commands/bot/ping.js"),
     require("./commands/minecraft/mcid.js"),
     require('./commands/tools/encode.js'),
-    require('./commands/tools/wiki.js'),
-    require('./commands/tools/spotify.js'),
-    require("./applications/report.js"),
-    require("./commands/settings/setup.js"),
     require("./commands/settings/suggestion.js"),
 ];
 
@@ -49,20 +43,8 @@ client.once(Events.ClientReady, async (c) => {
         status: "online",
     });
 
-    // VCセッション情報を初期化
     await voiceLogger.initializeVoiceSessions(c);
-
-    // 0時に誕生日のユーザをチェックする
-    schedule.scheduleJob('0 0 * * *', () => {
-        console.log('誕生日のユーザーをチェックしています...');
-        birthdayChecker.checkBirthdays(client);
-    });
 });
-
-client.on('voiceStateUpdate', async (oldState, newState) => {
-    await voiceLogger.logVoiceStateUpdate(oldState, newState);
-});
-
 
 client.commands = new Collection();
 const commandFolders = fs.readdirSync(path.join(__dirname, 'commands'));
@@ -77,9 +59,6 @@ for (const folder of commandFolders) {
     }
 }
 
-// ▼▼▼▼▼ ここから下を修正 ▼▼▼▼▼
-
-// interactionCreateイベントリスナーを一つに統合
 client.on(Events.InteractionCreate, async (interaction) => {
     // スラッシュコマンドの処理
     if (interaction.isChatInputCommand()) {
@@ -244,7 +223,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                         { name: '反対', value: `${rejectCount}票`, inline: true }
                     )
                     .setTimestamp();
-                
+
                 if (!isAnonymous) {
                     resultEmbed.setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() });
                 }
@@ -264,7 +243,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                         new ButtonBuilder().setCustomId('suggestion_approve_disabled').setLabel(`賛成 (${approveCount})`).setStyle(ButtonStyle.Success).setEmoji('⭕').setDisabled(true),
                         new ButtonBuilder().setCustomId('suggestion_reject_disabled').setLabel(`反対 (${rejectCount})`).setStyle(ButtonStyle.Danger).setEmoji('❌').setDisabled(true)
                     );
-                
+
                 try {
                     await sentMessage.edit({ components: [disabledRow] });
                 } catch (error) {
