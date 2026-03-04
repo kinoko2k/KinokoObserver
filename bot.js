@@ -11,7 +11,7 @@ const {
     TextInputBuilder,
     TextInputStyle,
 } = require("discord.js");
-const { token, suggestionChannelId, suggestionResultChannelId } = require("./config.json");
+const { token } = require("./config.json");
 const fs = require('fs');
 const path = require('path');
 const schedule = require('node-schedule');
