@@ -5,7 +5,6 @@ const path = require('path');
 
 const guildCommands = [
     require('./commands/minecraft/mcid.js').data.toJSON(),
-    require('./commands/tools/encode.js').data.toJSON(),
     require("./commands/settings/suggestion.js").data.toJSON(),
     require("./commands/mcstats/mcstats.js").data.toJSON(),
 ];
@@ -22,7 +21,7 @@ for (const file of appFiles) {
 
 const rest = new REST({ version: '10' }).setToken(token);
 
-(async () => {
+const deployCommands = async () => {
     try {
         for (const guildId of guildIds) {
             console.log(`ギルドコマンドを登録中（Guild ID: ${guildId}）...`);
@@ -35,4 +34,10 @@ const rest = new REST({ version: '10' }).setToken(token);
     } catch (error) {
         console.error('コマンドの登録中にエラーが発生しました:', error);
     }
-})();
+};
+
+if (require.main === module) {
+    deployCommands();
+}
+
+module.exports = { deployCommands };
