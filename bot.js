@@ -6,7 +6,6 @@ const {
 const { token } = require("./config.json");
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
 
 const client = new Client({
     intents: [
