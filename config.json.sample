@@ -3,5 +3,6 @@
     "guildIds": ["guild_id"],
     "token": "token",
     "welcomeChannelId": "welcome_channel_id",
-    "messageLogChannelId": "message_log_channel_id"
+    "messageLogChannelId": "message_log_channel_id",
+    "botLogChannelId": "bot_log_channel_id"
 }

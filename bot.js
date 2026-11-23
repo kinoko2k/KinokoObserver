@@ -2,8 +2,9 @@ const {
     Client,
     Events,
     GatewayIntentBits,
+    EmbedBuilder,
 } = require("discord.js");
-const { token } = require("./config.json");
+const { token, botLogChannelId } = require("./config.json");
 const fs = require('fs');
 const path = require('path');
 
@@ -25,6 +26,22 @@ client.once(Events.ClientReady, async (c) => {
         status: "online",
     });
 
+    if (botLogChannelId) {
+        const logChannel = c.channels.cache.get(botLogChannelId);
+        if (logChannel) {
+            const startupEmbed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle('Bot 起動ログ')
+                .setDescription(`${c.user.tag} が起動しました。`)
+                .setTimestamp();
+
+            try {
+                await logChannel.send({ embeds: [startupEmbed] });
+            } catch (error) {
+                console.error(`起動ログを送信できませんでした。${error}`);
+            }
+        }
+    }
 });
 
 const eventsPath = path.join(__dirname, 'events');
