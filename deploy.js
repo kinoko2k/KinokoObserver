@@ -3,11 +3,7 @@ const { applicationId, token, guildIds } = require('./config.json');
 const fs = require('fs');
 const path = require('path');
 
-const guildCommands = [
-    require('./commands/minecraft/mcid.js').data.toJSON(),
-    require("./commands/settings/suggestion.js").data.toJSON(),
-    require("./commands/mcstats/mcstats.js").data.toJSON(),
-];
+const guildCommands = [];
 
 const appPath = path.join(__dirname, 'applications');
 const appFiles = fs.readdirSync(appPath).filter(file => file.endsWith('.js'));

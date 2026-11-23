@@ -2,6 +2,6 @@
     "applicationId": "application_id",
     "guildIds": ["guild_id"],
     "token": "token",
-    "reportChannelId": "report_id",
-    "welcomeChannelId": "welcome_channel_id"
+    "welcomeChannelId": "welcome_channel_id",
+    "messageLogChannelId": "message_log_channel_id"
 }
