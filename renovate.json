@@ -5,7 +5,9 @@
   ],
   "assignees": ["kinoko2k"],
   "timezone": "Asia/Tokyo",
-  "dependencyDashboard": false,
+  "dependencyDashboard": {
+    "enabled": false
+  },
   "automerge": true,
   "configMigration": true,
   "platformCommit": "enabled"
