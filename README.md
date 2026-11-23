@@ -1,0 +1,3 @@
+# KinokoObserver
+
+KinokoServer2のDiscordサーバーで使われているDiscordBotです。
